@@ -1,78 +1,65 @@
-import React from "react";
+import React, { useState } from "react";
 import { Stack, Link } from "expo-router";
-import { FlatList, Pressable, StyleSheet, View, Text, Alert, Platform } from "react-native";
+import { FlatList, Pressable, StyleSheet, View, Text, Platform, TextInput } from "react-native";
 import { IconSymbol } from "@/components/IconSymbol";
-import { GlassView } from "expo-glass-effect";
-import { useTheme } from "@react-navigation/native";
-
-const ICON_COLOR = "#007AFF";
+import { colors } from "@/styles/commonStyles";
+import { stocks } from "@/data/stocks";
 
 export default function HomeScreen() {
-  const theme = useTheme();
-  const modalDemos = [
-    {
-      title: "Standard Modal",
-      description: "Full screen modal presentation",
-      route: "/modal",
-      color: "#007AFF",
-    },
-    {
-      title: "Form Sheet",
-      description: "Bottom sheet with detents and grabber",
-      route: "/formsheet",
-      color: "#34C759",
-    },
-    {
-      title: "Transparent Modal",
-      description: "Overlay without obscuring background",
-      route: "/transparent-modal",
-      color: "#FF9500",
-    }
-  ];
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const renderModalDemo = ({ item }: { item: (typeof modalDemos)[0] }) => (
-    <GlassView style={[
-      styles.demoCard,
-      Platform.OS !== 'ios' && { backgroundColor: theme.dark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
-    ]} glassEffectStyle="regular">
-      <View style={[styles.demoIcon, { backgroundColor: item.color }]}>
-        <IconSymbol name="square.grid.3x3" color="white" size={24} />
-      </View>
-      <View style={styles.demoContent}>
-        <Text style={[styles.demoTitle, { color: theme.colors.text }]}>{item.title}</Text>
-        <Text style={[styles.demoDescription, { color: theme.dark ? '#98989D' : '#666' }]}>{item.description}</Text>
-      </View>
-      <Link href={item.route as any} asChild>
-        <Pressable>
-          <GlassView style={[
-            styles.tryButton,
-            Platform.OS !== 'ios' && { backgroundColor: theme.dark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)' }
-          ]} glassEffectStyle="clear">
-            <Text style={[styles.tryButtonText, { color: theme.colors.primary }]}>Try It</Text>
-          </GlassView>
+  const filteredStocks = stocks.filter(stock =>
+    stock.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    stock.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const renderStockItem = ({ item }: { item: typeof stocks[0] }) => {
+    const isPositive = item.change >= 0;
+    const changeColor = isPositive ? colors.accent : '#dc3545';
+
+    return (
+      <Link href={`/(tabs)/(home)/${item.id}`} asChild>
+        <Pressable style={styles.stockCard}>
+          <View style={styles.stockHeader}>
+            <View style={styles.stockInfo}>
+              <Text style={[styles.stockSymbol, { color: colors.text }]}>
+                {item.symbol}
+              </Text>
+              <Text style={[styles.stockName, { color: colors.textSecondary }]}>
+                {item.name}
+              </Text>
+            </View>
+            <View style={styles.stockPrice}>
+              <Text style={[styles.price, { color: colors.text }]}>
+                KES {item.price.toFixed(2)}
+              </Text>
+              <View style={[styles.changeContainer, { backgroundColor: isPositive ? '#d4edda' : '#f8d7da' }]}>
+                <IconSymbol
+                  name={isPositive ? "arrow.up" : "arrow.down"}
+                  color={changeColor}
+                  size={12}
+                />
+                <Text style={[styles.change, { color: changeColor }]}>
+                  {isPositive ? '+' : ''}{item.change.toFixed(2)}%
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.recommendationBar}>
+            <View style={[styles.recommendationBadge, { backgroundColor: item.recommendation === 'buy' ? colors.accent : item.recommendation === 'sell' ? '#dc3545' : colors.highlight }]}>
+              <Text style={[styles.recommendationText, { color: colors.text }]}>
+                {item.recommendation.toUpperCase()}
+              </Text>
+            </View>
+          </View>
         </Pressable>
       </Link>
-    </GlassView>
-  );
+    );
+  };
 
   const renderHeaderRight = () => (
-    <Pressable
-      onPress={() => Alert.alert("Not Implemented", "This feature is not implemented yet")}
-      style={styles.headerButtonContainer}
-    >
-      <IconSymbol name="plus" color={theme.colors.primary} />
-    </Pressable>
-  );
-
-  const renderHeaderLeft = () => (
-    <Pressable
-      onPress={() => Alert.alert("Not Implemented", "This feature is not implemented yet")}
-      style={styles.headerButtonContainer}
-    >
-      <IconSymbol
-        name="gear"
-        color={theme.colors.primary}
-      />
+    <Pressable style={styles.headerButtonContainer}>
+      <IconSymbol name="bell" color={colors.text} size={20} />
     </Pressable>
   );
 
@@ -81,17 +68,26 @@ export default function HomeScreen() {
       {Platform.OS === 'ios' && (
         <Stack.Screen
           options={{
-            title: "Building the app...",
+            title: "Kenyan Stocks",
             headerRight: renderHeaderRight,
-            headerLeft: renderHeaderLeft,
           }}
         />
       )}
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.searchContainer}>
+          <IconSymbol name="magnifyingglass" color={colors.textSecondary} size={18} />
+          <TextInput
+            style={[styles.searchInput, { color: colors.text }]}
+            placeholder="Search stocks..."
+            placeholderTextColor={colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
         <FlatList
-          data={modalDemos}
-          renderItem={renderModalDemo}
-          keyExtractor={(item) => item.route}
+          data={filteredStocks}
+          renderItem={renderStockItem}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={[
             styles.listContainer,
             Platform.OS !== 'ios' && styles.listContainerWithTabBar
@@ -107,55 +103,93 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    // backgroundColor handled dynamically
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: colors.card,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 16,
   },
   listContainer: {
-    paddingVertical: 16,
     paddingHorizontal: 16,
+    paddingBottom: 16,
   },
   listContainerWithTabBar: {
-    paddingBottom: 100, // Extra padding for floating tab bar
+    paddingBottom: 100,
   },
-  demoCard: {
+  stockCard: {
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.08)',
+    elevation: 2,
+  },
+  stockHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
-  demoIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  demoContent: {
+  stockInfo: {
     flex: 1,
   },
-  demoTitle: {
+  stockSymbol: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 4,
-    // color handled dynamically
   },
-  demoDescription: {
-    fontSize: 14,
-    lineHeight: 18,
-    // color handled dynamically
+  stockName: {
+    fontSize: 13,
   },
-  headerButtonContainer: {
-    padding: 6,
+  stockPrice: {
+    alignItems: 'flex-end',
   },
-  tryButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+  price: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  changeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
+  },
+  change: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  recommendationBar: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  recommendationBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 6,
   },
-  tryButtonText: {
-    fontSize: 14,
+  recommendationText: {
+    fontSize: 12,
     fontWeight: '600',
-    // color handled dynamically
+  },
+  headerButtonContainer: {
+    padding: 8,
   },
 });
